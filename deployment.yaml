@@ -33,3 +33,9 @@ spec:
       port: 3000
       targetPort: 3000
       nodePort: 30000
+
+
+https://docs.microsoft.com/en-us/azure/architecture/patterns/leader-election
+Kan jeg bare sette opp en ny service og en nyt instans som er min sidecar som har bare som oppgave
+å serve alle poddene og holde på en lease i X antall minutter, så må bare den som har leasen
+hele tiden spørre om å fornye den.
