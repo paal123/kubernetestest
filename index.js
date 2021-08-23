@@ -1,27 +1,66 @@
 const express = require("express");
+const http = require("http");
 
 const app = express();
+const serviceUrl = process.env.LEADERELECTOR_SERVICE;
+var hexId;
 
-app.listen(3000, function() {
+
+app.listen(3000, async function() {
     console.log("listening on port 3000 " + Date.now());
+    console.log("Your leader elector service is " + serviceUrl);
+
+    // Synchronous
+    const {
+        randomBytes
+    } = await import('crypto');
+  
+    hexId = randomBytes(8).toString("hex");
 });
 
 app.get("/", (req,res) => {
-    console.log("Executing Users Shown " + Date.now());
-    res.send("Users Shown " + Date.now());
+    res.send("Use endpoint /CheckLeader?caller=yourid");
 });
 
-app.get("/delete", (req,res) => {
-    console.log("Executing Delete User " + Date.now() );
-    res.send("Delete User " + Date.now());
-});
+app.get("/checkLeader", async (req,res) => {
+    console.log("Executing Check Leader at " + Date.now());
 
-app.get("/update", (req,res) => {
-    console.log("Executing Updating User " + Date.now());
-    res.send("User Updated " + Date.now());
-});
+    var options = {
+        hostname: serviceUrl,
+        port: 3003,
+        path: '/ProceedAsLeader?' + new URLSearchParams({caller: hexId}).toString(),
+        headers : {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        method: 'GET'
+    }
 
-app.get("/insert", (req,res) => {
-    console.log("Executing Inserting User " + Date.now());
-    res.send("User Inserted " + Date.now());
+    console.log("With options " + JSON.stringify(options));
+
+    const reqLeader = await http.request(options, resLeader => {
+        console.log(`statusCode: ${resLeader.statusCode}`);   
+        let all_chunks = [];
+        resLeader.on('data', (chunk) => {
+            all_chunks.push(chunk);
+        });
+
+        resLeader.on('end', () => {
+            let response_body = Buffer.concat(all_chunks);
+            
+            // response body as string
+            console.log(response_body.toString());
+            var iAmNowLeader = response_body.toString();
+            if (iAmNowLeader === 'true') {
+                res.send("Running as leader: " + iAmNowLeader + " from: " + hexId);
+            } else {
+                res.send("Not running as leader, skipping: " + iAmNowLeader + " from: " + hexId);
+            }
+        });
+      });
+      
+    reqLeader.on('error', error => {
+      console.error(error)
+    });
+      
+    reqLeader.end();
 });

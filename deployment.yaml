@@ -16,9 +16,15 @@ spec:
     spec:
       containers:
         - name: kubernetestest
-          image: paal12345/nodejs-starter:2.0
+          image: paal12345/nodejs-starter:6.15
           ports:
           - containerPort: 3000
+          env:
+          - name: LEADERELECTOR_SERVICE
+            valueFrom:
+              configMapKeyRef:
+                name: kubernetest-configmap
+                key: leaderelector_url
 ---
 apiVersion: v1
 kind: Service
@@ -33,9 +39,40 @@ spec:
       port: 3000
       targetPort: 3000
       nodePort: 30000
-
-
-https://docs.microsoft.com/en-us/azure/architecture/patterns/leader-election
-Kan jeg bare sette opp en ny service og en nyt instans som er min sidecar som har bare som oppgave
-å serve alle poddene og holde på en lease i X antall minutter, så må bare den som har leasen
-hele tiden spørre om å fornye den.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: leaderelector-deployment
+  labels:
+    app: leaderelector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: leaderelector
+  template:
+    metadata:
+      labels:
+        app: leaderelector
+    spec:
+      containers:
+        - name: kubernetestest
+          image: paal12345/leaderelector:4.11
+          ports:
+          - containerPort: 3003
+          env:
+          - name: LEASE_TIME
+            value: "1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: leaderelector-service
+spec:
+  selector:
+    app: leaderelector
+  ports:
+    - protocol: TCP
+      port: 3003
+      targetPort: 3003
