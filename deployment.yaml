@@ -25,6 +25,13 @@ spec:
               configMapKeyRef:
                 name: kubernetest-configmap
                 key: leaderelector_url
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: node
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: nodejs  
 ---
 apiVersion: v1
 kind: Service
